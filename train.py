@@ -13,7 +13,7 @@ opt = {
     'dataset': None,
     'num_classes': 10,
     'augment': True,
-    'validation': True,
+    'validation': False,
     'save': 'logs',
     'batchSize': 128,
     'learningRate': 0.1,
@@ -23,16 +23,16 @@ opt = {
     'momentum': 0.9,
     'max_epoch': 200,
     'optimMethod': 'sgd',
-    'depth': 16,
+    'depth': 28,
     'shortcutType': 'A',
     'nesterov': True,
-    'dropout': 0.3,
-    'blockwise': True,
+    'dropout': 0.0,
+    'blockwise': False,
     'hflip': True,
     'randomCrop': 4,
     'imageSize': 32,
     'randomcrop_type': 0,
-    'widen_factor': 4,
+    'widen_factor': 10,
     'nGPU': 1,
     'data_type': 'torch.CudaTensor',
     'seed': 444
@@ -48,8 +48,8 @@ Normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                  std=[0.5, 0.5, 0.5])
 
 test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        Normalize])
+    transforms.ToTensor(),
+    Normalize])
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                        download=True, transform=test_transform)
@@ -64,13 +64,14 @@ if opt['validation']:
     criterion = nn.CrossEntropyLoss()
     running_loss = 0.0
     optim_dropout = {'rate': 0.0, 'accuracy': 0.0}
-    for dropout in [0.0, 0.05, 0.1]:
+    for dropout in [0.02, 0.03, 0.04]:
         opt['dropout'] = dropout
         net = resnet.buildModel(opt = opt)
         if torch.cuda.is_available():
             net.cuda()
             print('New net moved to CUDA')
-        optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay = 0.0005, nesterov = True)
+        optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay = 0.0005,
+                              nesterov = True)
         for epoch in range(100):
 
             if epoch == 30:
@@ -120,8 +121,9 @@ if opt['validation']:
 
         accuracy = 100 * correct / float(total)
 
-        print('Accuracy of the network with {} dropout rate {} on the {} validation images: {:2.2f}%'.format(
-            opt['blockwise'] and 'block' or '', opt['dropout'], total, accuracy))
+        print('''Accuracy of the network with {} dropout rate {} on the {} validation images:
+        {:2.2f}%'''.format(opt['blockwise'] and 'block' or '', opt['dropout'],
+                         total, accuracy))
 
         if accuracy > optim_dropout['accuracy']:
             optim_dropout['rate'] = dropout
@@ -133,22 +135,21 @@ if opt['validation']:
     print('The optimal validation dropout was {}'.format(optim_dropout['rate']))
 
 
-
-
 else:
-
+    
     net = resnet.buildModel(opt = opt)
     if torch.cuda.is_available():
         net.cuda()
         print('CUDA IS AVAILABLE')
-        print('NEW NET MOVED TO CUDA')
+        print('TRAIN NET MOVED TO CUDA')
     else:
         print('CUDA NOT AVAILABLE')
 
     print(net)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay = 0.0005, nesterov = True)
+    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay = 0.0005,
+                          nesterov = True)
 
     def adjust_learning_rate(optimizer, lr):
         for param_group in optimizer.param_groups:
